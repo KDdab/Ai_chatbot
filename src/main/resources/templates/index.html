@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nemonia — Emergency AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #e4e4e7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(251, 146, 60, 0.06));
+            border-bottom: 1px solid rgba(220, 38, 38, 0.15);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #dc2626, #f97316);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+        }
+
+        .header-text h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #f87171, #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-text p {
+            font-size: 0.75rem;
+            color: #71717a;
+            font-weight: 400;
+        }
+
+        .status-badge {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            font-size: 0.7rem;
+            color: #4ade80;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+        }
+
+        /* ── Chat Area ── */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-track { background: transparent; }
+        .chat-container::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+
+        /* Welcome message */
+        .welcome {
+            text-align: center;
+            padding: 3rem 1rem;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .welcome-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #e4e4e7;
+        }
+
+        .welcome p {
+            color: #71717a;
+            font-size: 0.85rem;
+            max-width: 400px;
+            margin: 0 auto 1.5rem;
+            line-height: 1.5;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .suggestion-chip {
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            background: rgba(39, 39, 42, 0.6);
+            border: 1px solid #3f3f46;
+            font-size: 0.78rem;
+            color: #a1a1aa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .suggestion-chip:hover {
+            background: rgba(220, 38, 38, 0.1);
+            border-color: rgba(220, 38, 38, 0.3);
+            color: #f87171;
+            transform: translateY(-1px);
+        }
+
+        /* ── Messages ── */
+        .message {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #dc2626, #f97316);
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.2);
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message.user .message-content {
+            text-align: right;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            padding: 0.75rem 1rem;
+            border-radius: 16px;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            max-width: 85%;
+            text-align: left;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-bubble {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-bottom-left-radius: 4px;
+            color: #d4d4d8;
+        }
+
+        .message-time {
+            font-size: 0.65rem;
+            color: #52525b;
+            margin-top: 0.3rem;
+        }
+
+        /* ── AI Response Card ── */
+        .ai-card {
+            margin-top: 0.5rem;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 85%;
+        }
+
+        .ai-card-header {
+            padding: 0.6rem 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #27272a;
+        }
+
+        .ai-card-header.severity-high {
+            background: rgba(220, 38, 38, 0.1);
+            color: #f87171;
+        }
+
+        .ai-card-header.severity-medium {
+            background: rgba(251, 146, 60, 0.1);
+            color: #fb923c;
+        }
+
+        .ai-card-header.severity-low {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+        }
+
+        .ai-card-header.severity-unknown {
+            background: rgba(161, 161, 170, 0.1);
+            color: #a1a1aa;
+        }
+
+        .ai-card-body {
+            padding: 0.85rem;
+        }
+
+        .ai-field {
+            margin-bottom: 0.65rem;
+        }
+
+        .ai-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .ai-field-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #71717a;
+            margin-bottom: 0.2rem;
+        }
+
+        .ai-field-value {
+            font-size: 0.84rem;
+            color: #d4d4d8;
+            line-height: 1.5;
+        }
+
+        .severity-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.15rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .severity-tag.high {
+            background: rgba(220, 38, 38, 0.15);
+            color: #f87171;
+        }
+
+        .severity-tag.medium {
+            background: rgba(251, 146, 60, 0.15);
+            color: #fb923c;
+        }
+
+        .severity-tag.low {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+        }
+
+        .severity-tag.unknown {
+            background: rgba(161, 161, 170, 0.15);
+            color: #a1a1aa;
+        }
+
+        .rule-severity-bar {
+            height: 4px;
+            background: #27272a;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+        }
+
+        .rule-severity-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+
+        /* ── Typing Indicator ── */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 0.85rem 1rem;
+        }
+
+        .typing-indicator span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #52525b;
+            animation: typing 1.4s ease-in-out infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        /* ── Input Area ── */
+        .input-area {
+            padding: 1rem 1.5rem 1.5rem;
+            background: linear-gradient(to top, #0a0a0f 60%, transparent);
+            position: sticky;
+            bottom: 0;
+        }
+
+        .input-wrapper {
+            max-width: 720px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .input-box {
+            flex: 1;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 16px;
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-box:focus-within {
+            border-color: rgba(220, 38, 38, 0.4);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+        }
+
+        .input-box textarea {
+            width: 100%;
+            background: none;
+            border: none;
+            outline: none;
+            color: #e4e4e7;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            resize: none;
+            max-height: 120px;
+            line-height: 1.4;
+        }
+
+        .input-box textarea::placeholder {
+            color: #52525b;
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #dc2626, #f97316);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .header { padding: 0.75rem 1rem; }
+            .chat-container { padding: 1rem; }
+            .input-area { padding: 0.75rem 1rem 1rem; }
+            .welcome { padding: 2rem 0.5rem; }
+            .suggestions { gap: 0.35rem; }
+            .suggestion-chip { font-size: 0.72rem; padding: 0.4rem 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div class="header-icon">🚨</div>
+    <div class="header-text">
+        <h1>Nemonia</h1>
+        <p>Emergency AI Assistant</p>
+    </div>
+    <div class="status-badge" id="statusBadge">
+        <div class="status-dot"></div>
+        <span>Online</span>
+    </div>
+</div>
+
+<!-- Chat Area -->
+<div class="chat-container" id="chatContainer">
+    <div class="welcome" id="welcomeScreen">
+        <div class="welcome-icon">🛡️</div>
+        <h2>How can I help?</h2>
+        <p>Describe your emergency situation and I'll analyze the type, severity, and provide safety instructions.</p>
+        <div class="suggestions">
+            <div class="suggestion-chip" onclick="useSuggestion('There is a fire in my building')">🔥 Building fire</div>
+            <div class="suggestion-chip" onclick="useSuggestion('I smell gas leaking in my kitchen')">💨 Gas leak</div>
+            <div class="suggestion-chip" onclick="useSuggestion('Someone is having a heart attack')">🫀 Medical emergency</div>
+            <div class="suggestion-chip" onclick="useSuggestion('There is flooding in my street')">🌊 Flood</div>
+        </div>
+    </div>
+</div>
+
+<!-- Input Area -->
+<div class="input-area">
+    <div class="input-wrapper">
+        <div class="input-box">
+            <textarea id="messageInput"
+                      placeholder="Describe your emergency..."
+                      rows="1"
+                      onkeydown="handleKeyDown(event)"
+                      oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    let isProcessing = false;
+
+    function getTime() {
+        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function useSuggestion(text) {
+        messageInput.value = text;
+        autoResize(messageInput);
+        sendMessage();
+    }
+
+    function addUserMessage(text) {
+        if (welcomeScreen) {
+            welcomeScreen.remove();
+        }
+
+        const html = `
+            <div class="message user">
+                <div class="message-avatar">👤</div>
+                <div class="message-content">
+                    <div class="message-bubble">${escapeHtml(text)}</div>
+                    <div class="message-time">${getTime()}</div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', html);
+        scrollToBottom();
+    }
+
+    function addTypingIndicator() {
+        const html = `
+            <div class="message bot" id="typingMsg">
+                <div class="message-avatar">🚨</div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <div class="typing-indicator">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', html);
+        scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+        const el = document.getElementById('typingMsg');
+        if (el) el.remove();
+    }
+
+    function getSeverityClass(severity) {
+        if (!severity) return 'unknown';
+        const s = severity.toLowerCase();
+        if (s === 'high') return 'high';
+        if (s === 'medium') return 'medium';
+        if (s === 'low') return 'low';
+        return 'unknown';
+    }
+
+    function getRuleSeverityColor(score) {
+        if (score >= 5) return '#ef4444';
+        if (score >= 3) return '#f97316';
+        return '#4ade80';
+    }
+
+    function addBotResponse(data) {
+        const ai = data.ai || {};
+        const sevClass = getSeverityClass(ai.severity);
+        const ruleScore = data.ruleSeverity || 0;
+        const rulePercent = Math.min(ruleScore * 10, 100);
+        const ruleColor = getRuleSeverityColor(ruleScore);
+        const alertTriggered = data.alertTriggered;
+
+        let alertBadge = '';
+        if (alertTriggered) {
+            alertBadge = `<div style="margin-top:0.5rem;padding:0.35rem 0.65rem;background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.25);border-radius:8px;font-size:0.72rem;color:#f87171;display:inline-flex;align-items:center;gap:0.3rem;">
+                🚨 Alert triggered
+            </div>`;
+        }
+
+        const html = `
+            <div class="message bot">
+                <div class="message-avatar">🚨</div>
+                <div class="message-content">
+                    <div class="ai-card">
+                        <div class="ai-card-header severity-${sevClass}">
+                            <span>⚡ Emergency Analysis</span>
+                        </div>
+                        <div class="ai-card-body">
+                            <div class="ai-field">
+                                <div class="ai-field-label">Type</div>
+                                <div class="ai-field-value">${escapeHtml(ai.type || 'N/A')}</div>
+                            </div>
+                            <div class="ai-field">
+                                <div class="ai-field-label">AI Severity</div>
+                                <div class="ai-field-value">
+                                    <span class="severity-tag ${sevClass}">${escapeHtml((ai.severity || 'unknown').toUpperCase())}</span>
+                                </div>
+                            </div>
+                            <div class="ai-field">
+                                <div class="ai-field-label">Rule Score</div>
+                                <div class="ai-field-value">${ruleScore} / 10</div>
+                                <div class="rule-severity-bar">
+                                    <div class="rule-severity-fill" style="width:${rulePercent}%;background:${ruleColor};"></div>
+                                </div>
+                            </div>
+                            <div class="ai-field">
+                                <div class="ai-field-label">Safety Instructions</div>
+                                <div class="ai-field-value">${escapeHtml(ai.instructions || 'No instructions available.')}</div>
+                            </div>
+                            ${alertBadge}
+                        </div>
+                    </div>
+                    <div class="message-time">${getTime()}</div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', html);
+        scrollToBottom();
+    }
+
+    function addErrorMessage(errorText) {
+        const html = `
+            <div class="message bot">
+                <div class="message-avatar">🚨</div>
+                <div class="message-content">
+                    <div class="message-bubble" style="border-color:rgba(220,38,38,0.3);color:#f87171;">
+                        ⚠️ ${escapeHtml(errorText)}
+                    </div>
+                    <div class="message-time">${getTime()}</div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', html);
+        scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function scrollToBottom() {
+        requestAnimationFrame(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+    }
+
+    async function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text || isProcessing) return;
+
+        isProcessing = true;
+        sendBtn.disabled = true;
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+
+        addUserMessage(text);
+        addTypingIndicator();
+
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+
+            removeTypingIndicator();
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            addBotResponse(data);
+        } catch (err) {
+            removeTypingIndicator();
+            addErrorMessage('Could not reach the server. Please make sure both services are running. ' + err.message);
+        } finally {
+            isProcessing = false;
+            sendBtn.disabled = false;
+            messageInput.focus();
+        }
+    }
+
+    // Focus input on load
+    messageInput.focus();
+</script>
+
+</body>
+</html>
