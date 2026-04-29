@@ -1,15 +1,22 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from gemini_service import analyze_emergency
+from schemas import HRRequest
+from gemini_service import analyze_message
+from intent_router import route_intent
 
 app = FastAPI()
 
-class EmergencyRequest(BaseModel):
-    message: str
 
-@app.post("/analyze")
-def analyze(data: EmergencyRequest):
+@app.post("/hr-assistant")
+def hr_assistant(data: HRRequest):
 
-    result = analyze_emergency(data.message)
+    ai_result = analyze_message(data.message)
 
-    return result
+    # route intent → backend action
+    action = route_intent(ai_result["intent"])
+
+    return {
+        "intent": ai_result["intent"],
+        "employee_name": ai_result["employee_name"],
+        "action": action,
+        "response": ai_result["response"]
+    }
