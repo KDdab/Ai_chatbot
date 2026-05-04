@@ -7,46 +7,37 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
-
 client = genai.Client(api_key=API_KEY)
 
 
-def analyze_emergency(message):
-
+def analyze_message(message):
     prompt = f"""
-    {SYSTEM_PROMPT}
+{SYSTEM_PROMPT}
 
-    Respond ONLY with a valid JSON object in this exact format:
-    {{"type": "<emergency type>", "severity": "<low|medium|high>", "instructions": "<safety instructions>"}}
-
-    USER MESSAGE:
-    {message}
-    """
+USER MESSAGE:
+{message}
+"""
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt
+        contents=[{"role": "user", "parts": [prompt]}]
     )
 
     text = response.text.strip()
-
-    # Remove markdown code fences if present
-    if text.startswith("```"):
-        lines = text.split("\n")
-        # Remove first line (```json) and last line (```)
-        lines = [l for l in lines if not l.strip().startswith("```")]
-        text = "\n".join(lines).strip()
+    text = text.replace("```json", "").replace("```", "")
 
     try:
         data = json.loads(text)
         return {
-            "type": data.get("type", "unknown"),
-            "severity": data.get("severity", "unknown"),
-            "instructions": data.get("instructions", text)
+            "intent": data.get("intent", "unknown"),
+            "employee_name": data.get("employee_name", "unknown"),
+            "action": data.get("action", "none"),
+            "response": data.get("response", text)
         }
-    except json.JSONDecodeError:
+    except:
         return {
-            "type": "unknown",
-            "severity": "unknown",
-            "instructions": text
+            "intent": "unknown",
+            "employee_name": "unknown",
+            "action": "none",
+            "response": text
         }
